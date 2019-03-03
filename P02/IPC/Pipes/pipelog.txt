@@ -1,0 +1,74 @@
+			Inter Process Communication
+ 				Pipes
+
+--------------------------------------------------------------------
+[60 s 846976431 us][Parent] Parent Process ID 2313
+--------------------------------------------------------------------
+[60 s 847246788 us][Parent] Pipes : Sending Data to Child
+Message : 	From Parent 
+Message size :11 
+Message : Hello Child 
+Message size :11 
+Message : IPC: PIPES 
+Message size :10 
+Message : /*Content*/ 
+Message size :11 
+Message :  Bye Child
+Message size :9 
+LED Status 0 
+Parent PID 2313 
+[60 s 847253864 us][Parent] Pipes : Sent Data successfully
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+[60 s 847693341 us]  Child Process ID 2314
+--------------------------------------------------------------------
+[60 s 856653281 us] Pipes : Received data from Parent
+Message : 	From Parent 
+Message size :11 
+Message : Hello Child 
+Message size :11 
+Message : IPC: PIPES 
+Message size :10 
+Message : /*Content*/ 
+Message size :11 
+Message :  Bye Child
+Message size :9 
+Led Status 0 
+Child PID 2313 
+[60 s 856665651 us] Pipes : Received data successfully
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+[60 s 856667250 us]Pipes :Sending data to Parent
+Message : From Child 
+Message size :10 
+Message : Hello Parent 
+Message size :12 
+Message : IPC: PIPES 
+Message size :10 
+Message : /*Content*/ 
+Message size :11 
+Message : Bye Parent 
+Message size :10 
+LED Status 1 
+Child PID 2314 
+[60 s 856706520 us]Pipes : Sent data successfully
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+[60 s 865037454 us][Parent] Pipes : Receiving data from child
+Message : From Child 
+Message size :10 
+Message : Hello Parent 
+Message size :12 
+Message : IPC: PIPES 
+Message size :10 
+Message : /*Content*/ 
+Message size :11 
+Message: Bye Parent 
+Message size :10 
+ LED Status 1 
+Parent PID 2314 
+[60 s 865048876 us][Parent] Pipes : Received data successfully
+--------------------------------------------------------------------
+--------------------------------------------------------------------
+[Interrupt] SIGINT RECEIVED, Terminating Pipes
+--------------------------------------------------------------------
