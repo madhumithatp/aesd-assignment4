@@ -22,7 +22,7 @@
 
 
 #define PORT 2000
-#define Filename socketlog.txt
+#define Filename "socketlog.txt"
 int  LogTime(FILE *logptr);
 void Signal_Init();
 void Signal_Handler(int signum);
@@ -56,20 +56,20 @@ int main()
 	char *Socket_Packets[] = { "From Client 1","IPC: Sockets "," Hello server","/*content*/","Bye server"}; 
      
     int PID = getpid();
-	IPC_packet Received_Buffer;
+	IPC_Packet * Received_Buffer;
     
 	int Read_Packet_size = 0;
 	 int Bytes_Received = 0;
 	 
-    FILE *logptr = fopen("log.txt", "a");
+    FILE *logptr = fopen(Filename, "a");
     if(logptr == NULL)
     {
         perror("file not opened");
         return -1;
     }
 	LogTime(logptr);
-    fprintf(logptr,"  [CLIENT] Process ID: %d\n" ,process_id);
-    printf("Client Process ID: %d\n",process_id);
+    fprintf(logptr,"  [CLIENT] Process ID: %d\n" ,PID);
+	fclose(logptr);
 	int Socket_Create;
     if ((Socket_Create = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     { 
@@ -77,14 +77,15 @@ int main()
         return -1; 
     } 
 	
+	logptr = fopen(Filename, "a");
     fprintf(logptr,"--------------------------------------------------------------------\n"); 
-    LogTime(logptr);printf("[CLIENT] Socket Created\n");
+    LogTime(logptr);
 
 	fprintf(logptr,"[CLIENT] Socket Created\n" );  
     
 	memset(&server_address, '0', sizeof(server_address)); 
     fprintf(logptr,"--------------------------------------------------------------------\n");
-
+	fclose(logptr);
     server_address.sin_family = AF_INET; 
     server_address.sin_port = htons(PORT); 
        
@@ -100,35 +101,35 @@ int main()
         return -1; 
     }
     printf("[CLIENT LOG] Socket Connection Established\n"); 
-    fclose(logptr);
-	while(!done)
+    
+	while(!Interrupt)
 	{
     	for(int i = 0; i < 5 ; i++)
     	{
-        	memcpy(c_packet.PacketData[i],Socket_Packets[i],strlen(Socket_Packets[i])+1);
+        	memcpy(client_packet.PacketData[i],Socket_Packets[i],strlen(Socket_Packets[i])+1);
         	client_packet.PacketSize[i] = strlen(Socket_Packets[i]);
     	}
-    	client_packet.PID = process_id;
+    	client_packet.PID = PID;
     	client_packet.LED_Status = 1;
 
-    	fopen(Filename, "a");
-	
-    	int PayloadSize = sizeof(Client_packet);
-    	Byte_send = send(Socket_Create,&PayloadSize,sizeof(int), 0);
+		int Byte_send = 0;
+    	int Packet_Size = sizeof(client_packet);
+    	Byte_send = send(Socket_Create,&Packet_Size,sizeof(int), 0);
+		logptr = fopen(Filename, "a");
 		fprintf(logptr,"--------------------------------------------------------------------\n");
    		LogTime(logptr);fprintf(logptr," CLIENT sending.........\n ");
 		fprintf(logptr,"Packet Size %ld\n",Packet_Size);
 
-
-
-	    Byte_send = send(Socket_Create , (char*)&Client_packet , sizeof(Client_packet), 0 );
-		fprintf(logptr," PID %d\n",Client_packet.PID);
+		fclose(logptr);
+	    Byte_send = send(Socket_Create , (char*)&client_packet , sizeof(client_packet), 0 );
+		logptr = fopen(Filename, "a");
+		fprintf(logptr," PID %d\n",client_packet.PID);
 	    for(int i =0 ; i<5 ; i++)
 		{
-		fprintf(logptr,"Message %s\n" ,Client_packet.PacketData[i]);
-	    fprintf(logptr,"Size %d\n" ,Client_packet.PacketSize[i]);
+		fprintf(logptr,"Message %s\n" ,client_packet.PacketData[i]);
+	    fprintf(logptr,"Size %d\n" ,client_packet.PacketSize[i]);
 		}
-	    fprintf(logptr,"LED STATUS %d\n" ,Client_packet.LED_Status);
+	    fprintf(logptr,"LED STATUS %d\n" ,client_packet.LED_Status);
 
 		LogTime(logptr);
 		fprintf(logptr,"Send Packets Successfully\n");
@@ -137,48 +138,50 @@ int main()
 	    
 	   
 	    int byte_read = read(Socket_Create, &Read_Packet_size, sizeof(int));
-	    fopen("log.txt", "a");
+	    logptr = fopen(Filename, "a");
 		fprintf(logptr,"--------------------------------------------------------------------\n");
 		LogTime(logptr);
 		fprintf(logptr,"[Client]Receiving Packets ..... \n");
 	    fprintf(logptr,"[CLIENT] Size of Server Packets %ld\n",Read_Packet_size);
-   
-	   
+		fclose(logptr);
+
+	    int Bytes_Received = 0;
+		char *Buffer =  (char*) malloc(Packet_Size);
 	    while(Bytes_Received < Packet_Size)
 	    {
-	        byte_read = read(Socket_Create, recv_buffer+Bytes_Received, 1024);
+	        byte_read = read(Socket_Create,Buffer+Bytes_Received, 1024);
 	        Bytes_Received= Bytes_Received+ byte_read;
 	    }
 	 
-
-
+		Received_Buffer = (IPC_Packet *)Buffer;
+		logptr = fopen(Filename, "a");
     	fprintf(logptr,"  Bytes Received : %ld\n" ,Bytes_Received);
- 		fprintf(logptr,"  PID %d\n",Bytes_Received.PID);
+ 		fprintf(logptr,"  PID %d\n",Received_Buffer->PID);
 	    for(int i = 0; i < 5; i++)
 	    {
-	        fprintf(logptr,"Message: %s\n" , Bytes_Received.PacketData[i]);
-	        fprintf(logptr," SIZE %d\n" , Bytes_Received.PacketSize[i]);
+	        fprintf(logptr,"Message: %s\n" , Received_Buffer->PacketData[i]);
+	        fprintf(logptr," SIZE %d\n" , Received_Buffer->PacketSize[i]);
 	    }
  
-	    fprintf(logptr,"LED Status : %d\n" , Bytes_Received.LED_Status);
+	    fprintf(logptr,"LED Status : %d\n" , Received_Buffer->LED_Status);
 	   
 	  
 		LogTime(logptr);
 		fprintf(logptr,"Received packets Successfully\n");
 	   	fprintf(logptr,"--------------------------------------------------------------------\n");
-    
+		fclose(logptr);free(Buffer);
 	}
-	fclose(logptr);
+	
+	
     return 0;
 } 
 
 int  LogTime(FILE *logptr)
 {
-  
-	  struct timespec logtime;
-	  clock_gettime(CLOCK_REALTIME, &logtime);
-	  fprintf(logptr,"[%ld s %ld us]",logtime.tv_sec,logtime.tv_nsec );
-	  return 1;
+	struct timespec logtime;
+	clock_gettime(CLOCK_REALTIME, &logtime);
+	fprintf(logptr,"[%ld s %ld us]",logtime.tv_sec,logtime.tv_nsec );
+	return 1;
 }
 void Signal_Init()
 {
@@ -194,6 +197,6 @@ void Signal_Handler(int signum)
     FILE *logptr = fopen(Filename,"a");
 	LogTime(logptr);
     fprintf(logptr,"[Interrupt] SIGINT RECEIVED, Terminating Queue\n");
-    fclose(logptr);
     Interrupt = 1;
+    fclose(logptr);
 }

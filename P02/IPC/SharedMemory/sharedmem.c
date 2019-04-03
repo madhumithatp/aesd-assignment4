@@ -35,10 +35,10 @@ volatile sig_atomic_t flag = 0;
 int main() 
 { 
 	int FD_ShMem;							//File Descriptor to shared memory
-	void* ptr_ShMem; 
-	const int txSize = sizeof(txpacket); 
+	void* ptr_ShMem;  
 	int PID = getpid();
 	IPC_Packet txpacket = {0};
+    const int txSize = sizeof(txpacket);
 	char const *Msg_P1[] = {"From Process 1","IPC: POSIX QUEUE"," Hello P2","/*content*/","Bye P2"};
 	
     printf("Process 1 Entered\n");
@@ -46,10 +46,10 @@ int main()
 	Signal_Init();
 
     FILE *fptr;
-    fptr = fopen(FILENAME,"w");
+    fptr = fopen(LOGFILE,"w+");
     if(fptr == NULL)
     {
-        perror("ERROR : File cant be opened \n");
+        printf("ERROR : File cant be opened \n");
     }
     LogTime(fptr);
     
@@ -57,7 +57,7 @@ int main()
     sem_t *sem = sem_open(SEMAPHORE, O_CREAT, 0666, 0); 
     if(SEM_FAILED == sem)
     {
-        perror("ERROR : Sempahore Open failed \n");
+        printf("ERROR : Sempahore Open failed \n");
         return -1;
     }
 	
@@ -66,16 +66,16 @@ int main()
 	
     if(FD_ShMem < 0)
     {
-        perror("Error : Shared Memory opening failed \n");
+        printf("Error : Shared Memory opening failed \n");
         return -1;
     } 
-    fptrrintf(fptr,"--------------------------------------------------------------------\n");
-    LogTime(fptr);fptrrintf(fptr,"[Process 1]Shared Memory Opened\n");
+    fprintf(fptr,"--------------------------------------------------------------------\n");
+    LogTime(fptr);fprintf(fptr,"[Process 1]Shared Memory Opened\n");
 	fclose(fptr);
     
     if(ftruncate(FD_ShMem, txSize))
 	{
-		perror("Error: ftruncate failed \n");
+		printf("Error: ftruncate failed \n");
 	}
   
     for(int i = 0; i < 5; i++)
@@ -84,65 +84,67 @@ int main()
         txpacket.PacketSize[i] = strlen(Msg_P1[i]);
     }
 
-    txpacket.pid = PID;
+    txpacket.PID = PID;
     txpacket.LED_State = 0;
 	
     ptr_ShMem = mmap(NULL, txSize, PROT_WRITE | PROT_READ, MAP_SHARED, FD_ShMem, 0);
     if(MAP_FAILED == ptr_ShMem)
     {
-        perror("Error : Memory Mapping failed");
+        printf("Error : Memory Mapping failed");
         shm_unlink(IPC_SHAREDMEM); 
         return -1;
     } 
 
     while(!flag)
     {
-        
         sleep(1);
-        fopen(LOGFILE,"a");
-        fptrrintf(fptr,"--------------------------------------------------------------------\n");
-        LogTime(fptr);fptrrintf(fptr,"[Process 1] Shared Memory : Copying Data from Process1 to Shared Memory\n");
-        for(int i = 0; i < 5; i++)
-        {
-            fptrrintf(fptr, "Message : %s \n", txpacket.PacketData[i]);
-            fptrrintf(fptr,"Message size :%d \n", txpacket.PacketSize[i]);
-        }
-        fptrrintf(fptr,"Led Status: %d \n",txpacket.LED_State);
-        fptrrintf(fptr,"Process 1 Pid :%d \n",txpacket.pid);
-        LogTime(fptr);fptrrintf(fptr,"Shared Memory : Copying data Successfully\n" );
-        fptrrintf(fptr,"--------------------------------------------------------------------\n");
-       
-        
         memcpy((char*)ptr_ShMem,(char*)&txpacket, sizeof(txpacket));
-        fclose(fptr);
-		
+        fptr = fopen(LOGFILE,"a");
+        // fprintf(fptr,"--------------------------------------------------------------------\n");
+        // LogTime(fptr);fprintf(fptr,"[Process 1] Shared Memory : Copying Data from Process1 to Shared Memory\n");
+        // for(int i = 0; i < 5; i++)
+        // {
+        //     fprintf(fptr, "Message : %s \n", txpacket.PacketData[i]);
+        //     fprintf(fptr,"Message size :%d \n", txpacket.PacketSize[i]);
+        // }
+        // fprintf(fptr,"Led Status: %d \n",txpacket.LED_State);
+        // fprintf(fptr,"Process 1 Pid :%d \n",txpacket.PID);
+        // LogTime(fptr);fprintf(fptr,"Shared Memory : Copying data Successfully\n" );
+        // fprintf(fptr,"--------------------------------------------------------------------\n");
+        // fclose(fptr);
+        
         sem_post(sem);
         sem_wait(sem);
 		
-        fopen(LOGFILE,"a");
-       
-        IPC_Packet *rxpacket = (IPC_Packet*)ptr_ShMem;
-        fptrrintf(fptr,"--------------------------------------------------------------------\n");
+        IPC_Packet rxpacket;
+        printf("Before mrmcopy \n");
+        memcpy((char*)&rxpacket, (char*)ptr_ShMem,sizeof(IPC_Packet));
+        
+        printf("after mrmcopy \n");
+        fptr = fopen(LOGFILE,"a");
+        printf("Before rx from p2 \n");
+        fprintf(fptr,"--------------------------------------------------------------------\n");
         LogTime(fptr);
-        fptrrintf(fptr,"[Process 1] Shared Memory : Received data from Process2\n");
+        fprintf(fptr,"[Process 1] Shared Memory : Received data from Process2\n");
 	   
         for(int i = 0; i < 5; i++)
         {
-            fptrrintf(fptr,"Message : %s \n", rxpacket->PacketData[i]);
-            fptrrintf(fptr,"Message size :%d \n", rxpacket->PacketSize[i]);
+            fprintf(fptr,"Message : %s \n", rxpacket.PacketData[i]);
+            fprintf(fptr,"Message size :%d \n", rxpacket.PacketSize[i]);
         }
        
-        fptrrintf(fptr,"Led Status %d \n", rxpacket->LED_State);
-        fptrrintf(fptr,"Process 2 Pid %d \n", rxpacket->pid);
-        LogTime(fptr);fptrrintf(fptr,"[Process 1] Shared Memory : Received data successfully\n");
-        fptrrintf(fptr,"--------------------------------------------------------------------\n");
+        fprintf(fptr,"Led Status %d \n", rxpacket.LED_State);
+        fprintf(fptr,"Process 2 Pid %d \n", rxpacket.PID);
+	    LogTime(fptr);fprintf(fptr,"[Process 1] Shared Memory : Received data successfully\n");
+        fprintf(fptr,"--------------------------------------------------------------------\n");
         fclose(fptr);
     }
 	
+    printf("SIGINT Received \n");
     fopen(LOGFILE,"a");
-    fptrrintf(fptr,"--------------------------------------------------------------------\n");
-    LogTime(fptr);fptrrintf(fptr,"[Interrupt] SIGINT RECEIVED, Terminating Shared Memory\n");
-    fptrrintf(fptr,"--------------------------------------------------------------------\n");
+    fprintf(fptr,"--------------------------------------------------------------------\n");
+    LogTime(fptr);fprintf(fptr,"[Interrupt] SIGINT RECEIVED, Terminating Shared Memory\n");
+    fprintf(fptr,"--------------------------------------------------------------------\n");
     fclose(fptr);
     shm_unlink(IPC_SHAREDMEM);
     sem_unlink(SEMAPHORE); 
@@ -153,7 +155,7 @@ int  LogTime(FILE *logptr)
 {
 	struct timespec logtime;
 	clock_gettime(CLOCK_REALTIME, &logtime);
-	fptrrintf(logptr,"[%ld s %ld us]",logtime.tv_sec,logtime.tv_nsec );
+	fprintf(logptr,"[%ld s %ld us]",logtime.tv_sec,logtime.tv_nsec );
 	return 1;
 }
 
@@ -168,5 +170,4 @@ void Signal_Init()
 void Signal_Handler(int signum)
 {
 	flag = 1;
-    printf("SIGINT Received \n");
 }
